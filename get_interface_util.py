@@ -25,7 +25,9 @@ sandbox = Device(host="10.56.133.100", user=u, password=p)
 
 try:
     devOpenHandle = sandbox.open()
-    print(type(devOpenHandle))
+    # Get number of access interfaces
+    # Determine % utilization
+    # Spit out a number
 except ConnectAuthError as authe:
     print "Authentication failed: {0}".format(authe)
     # Try to get their credentials again
