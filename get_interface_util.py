@@ -26,8 +26,16 @@ sandbox = Device(host="10.56.133.100", user=u, password=p)
 try:
     devOpenHandle = sandbox.open()
     # Get number of access interfaces
-    # Determine % utilization
-    # Spit out a number
+    # I think this can be done simply by grabbing all the ge-* interfaces and
+    # excepting anything that's tagged. Need to make sure that interfaces that
+    # are not configured are counted. Might have to do this simply with model
+    # numbers since they don't seem to show up in either ethport or phyport
+    # tables.
+
+    # Determine % utilization - divide active interfaces by available
+    # interfaces.
+    # Spit out the number * 100
+
 except ConnectAuthError as authe:
     print "Authentication failed: {0}".format(authe)
     # Try to get their credentials again
