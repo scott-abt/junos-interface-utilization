@@ -7,14 +7,21 @@ from jnpr.junos.exception import (
 
 import ConfigParser
 from getpass import getpass
+from lxml import etree
 
 config = ConfigParser.ConfigParser()
 config.read('default.ini')
 
-u = raw_input("Username: ")
-p = getpass()
+u = ""
+p = ""
 
-if not u or u is "" or not p or p is "":
+count = 0
+while count < 3 and not p or p is "":
+    u = raw_input("Username: ")
+    p = getpass()
+    count += 1
+
+if u is "" or p is "":
     print("Username or password not supplied, using defaults...")
     u = config.get('DEFAULT', 'username')
     p = config.get('DEFAULT', 'password')
@@ -25,6 +32,10 @@ sandbox = Device(host="10.56.133.100", user=u, password=p)
 
 try:
     devOpenHandle = sandbox.open()
+
+    print(etree.tostring(sandbox.rpc.get_interface_information(terse=True),
+        pretty_print=True))
+
     # Get number of access interfaces
     # I think this can be done simply by grabbing all the ge-* interfaces and
     # excepting anything that's tagged. Need to make sure that interfaces that
@@ -35,6 +46,8 @@ try:
     # Determine % utilization - divide active interfaces by available
     # interfaces.
     # Spit out the number * 100
+
+    sandbox.close()
 
 except ConnectAuthError as authe:
     print "Authentication failed: {0}".format(authe)
