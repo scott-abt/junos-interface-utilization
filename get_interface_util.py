@@ -31,10 +31,10 @@ if u is "" or p is "":
 
 Device.auto_probe = 10
 
-sandbox = Device(host="10.56.133.100", user=u, password=p)
+switch = Device(host="10.56.133.100", user=u, password=p)
 
 try:
-    devOpenHandle = sandbox.open()
+    devOpenHandle = switch.open()
 
 
 except ConnectAuthError as authe:
@@ -48,7 +48,7 @@ except ConnectRefusedError as cr:
 except ConnectTimeoutError as ct:
     print "Connection timed out: {0}".format(ct)
 
-print(etree.tostring(sandbox.rpc.get_interface_information(terse=True),
+print(etree.tostring(switch.rpc.get_interface_information(terse=True),
     pretty_print=True))
 
 # Get number of access interfaces
@@ -62,4 +62,4 @@ print(etree.tostring(sandbox.rpc.get_interface_information(terse=True),
 # interfaces.
 # Spit out the number * 100
 
-sandbox.close()
+switch.close()
