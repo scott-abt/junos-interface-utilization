@@ -35,9 +35,13 @@ class AccessInterfaceUtilization:
 
         if len(self.switch_dict.keys()) > 0:
             # Initialize the connection variables.
+
+            # Need to create better way to get config for portability. Multiple
+            # devices with multiple default creds.
             self.switch_dict['username'] = self.cfg.get('DEFAULT', 'username')
             self.switch_dict['password'] = self.cfg.get('DEFAULT', 'password')
-            self.op_rpc = "show ethernet-switching interfaces detail | display xml"
+            self.op_rpc = str(
+                    'show ethernet-switching interfaces detail | display xml')
 
             # Create the connection and get the xml
             self.conn = ConnectHandler(**self.switch_dict)
