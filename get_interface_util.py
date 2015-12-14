@@ -10,30 +10,40 @@ non-access ports.
 # RPC calls can be returned in XML format in Junos by passing "| display xml"
 # to the command. Can I use the json module to parse the XML to a dict?
 
-import ConfigParser
+from ConfigParser import ConfigParser
+import getpass
+from netmiko import ConnectHandler
+
 class AccessInterfaceUtilization:
+    
     """
     Object containing utilization stats of a switch
+    device_dict needs to be in netmiko device format.
     """
-    def __init__(self, device):
-        self.creds = self.__createDefaults()
-        if self.creds:
-            self.u = self.creds[0]
-            self.p = self.creds[1]
 
-    def __createDefaults(self):
+    def __init__(self, ini_file="default.ini", device_dict={}):
+        # create connection to juniper device and get the output from "show
+        # interfaces terse | display xml"
+
         try:
-            self.config = ConfigParser.ConfigParser()
-            self.config.readfp(open('default.ini'))
-            return [self.config.get('DEFAULT', 'username'),
-                self.config.get('DEFAULT', 'password')]
+            cfg = ConfigParser()
+            cfg.readfp(open(ini_file))
         except IOError as ioe:
-            print("Could not open default.ini: {0}".format(ioe))
-        except ConfigParser.Error as e:
-            print("ConfigParser died: {0}".format(e))
+            print("Error opening " + ini_file + " {0}".format(ioe))
+
+        if len(device_dict.keys()) > 0:
+            print(len(device_dict.keys()))
+
+            device_dict['username'] = cfg.get('DEFAULT', 'username')
+            self.op_rpc = "show interfaces terse | display xml"
+        else:
+            print("Got no devices")
 
 def main():
-    util = AccessInterfaceUtilization("tacos")
+    from SWITCH_LIST import the_list
+    for each_switch in the_list:
+        print("Trying " + each_switch['ip'])
+        util = AccessInterfaceUtilization("mycreds.ini", )
 
 if __name__ == "__main__":
     main()
