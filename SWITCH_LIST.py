@@ -1,6 +1,6 @@
 sandbox = {
     'device_type': 'juniper',
-    'ip': '10.56.133.10',
+    'ip': '10.56.133.100',
     'username': '',
     'password': '',
 }
