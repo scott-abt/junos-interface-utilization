@@ -13,6 +13,7 @@ non-access ports.
 from ConfigParser import ConfigParser
 import getpass
 from netmiko import ConnectHandler
+import xmltodict
 
 class AccessInterfaceUtilization:
     
@@ -46,7 +47,12 @@ class AccessInterfaceUtilization:
             # Create the connection and get the xml
             self.conn = ConnectHandler(**self.switch_dict)
             self.xml_output = self.conn.send_command(self.op_rpc)
-            print(self.xml_output)
+            self.clean_xml = str(self.xml_output).strip().partition("\n")[2]
+            
+            self.dict_of_xml = xmltodict.parse(self.clean_xml)
+            print(type(self.dict_of_xml))
+
+
 
             # Parse the XML for the active, access interfaces (not xe-* or
             # tagged interfaces)
@@ -54,6 +60,7 @@ class AccessInterfaceUtilization:
 
         else:
             print("Got no devices")
+            self.device_list = {}
 
 def main():
     """
