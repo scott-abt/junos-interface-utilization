@@ -14,6 +14,7 @@ from ConfigParser import ConfigParser
 import getpass
 from netmiko import ConnectHandler
 import xmltodict
+import re
 
 class AccessInterfaceUtilization:
     
@@ -50,14 +51,13 @@ class AccessInterfaceUtilization:
             self.clean_xml = str(self.xml_output).strip().partition("\n")[2]
             
             self.dict_of_xml = xmltodict.parse(self.clean_xml)
-            print(type(self.dict_of_xml))
-
-
-
-            # Parse the XML for the active, access interfaces (not xe-* or
-            # tagged interfaces)
-            # Question of the day: How do I do that?
-
+            for interface in self.dict_of_xml['rpc-reply']['switching-interface-information']['interface']:
+                self.gige_re = re.compile('ge-.*')
+                if (self.gige_re.match(interface['interface-name']) and
+                        interface['interface-port-mode'] == "Access" and
+                        interface['interface-state'] == "up"):
+                    print(interface['interface-name'] + " " +
+                        interface['interface-port-mode'])
         else:
             print("Got no devices")
             self.device_list = {}
