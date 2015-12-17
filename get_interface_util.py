@@ -7,11 +7,11 @@ Specifically written for Python 2.6 because that's what I have. Get the % of uti
 non-access ports.
 """
 
-from ConfigParser import ConfigParser
-import getpass
+import getpass, sys, xmltodict
 from netmiko import ConnectHandler
-import xmltodict
-import re
+from argparse import ArgumentParser as AP
+from argparse import FileType
+from ConfigParser import ConfigParser
 
 class AccessInterfaceUtilization:
     
@@ -67,18 +67,26 @@ class AccessInterfaceUtilization:
             self.device_list = {}
 
 def main():
-    """
-    If running from the command line, you must provide the INI file
-    in a form that ConfigParser understands. Minimal example:
-    [DEFAULT]
-    username: myusername
-    password: mypassword
-    """
-    from SWITCH_LIST import the_list
-    for each_switch in the_list:
-        print("Trying " + each_switch['ip'])
-        util = AccessInterfaceUtilization("mycreds.ini", each_switch)
-        print(util.up_access_interfaces)
+    arg_parser = AP()
+    
+    arg_parser.add_argument('-u', dest='username',
+            help='Switch user with operator priveleges')
+    arg_parser.add_argument('-f', dest='cfg_file', 
+            default="SWITCH_LIST",
+            help="Imports list of dicts from a local file. default is "
+            "SWITCH_LIST.py")
+    result = arg_parser.parse_args()
+    
+    SWITCH_LIST = __import__(result.cfg_file)
+    print(SWITCH_LIST.the_list[0]['ip'])
+
+
+    ## Build the switch dict and create the object.
+
+#    for each_switch in the_list:
+#        print("Trying " + each_switch['ip'])
+#        util = AccessInterfaceUtilization("mycreds.ini", each_switch)
+#        print(util.up_access_interfaces)
 
 if __name__ == "__main__":
     main()
