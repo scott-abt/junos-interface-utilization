@@ -38,22 +38,22 @@ class AccessInterfaceUtilization:
         if len(self.switch_dict.keys()) > 0:
             # Need to create better way to get config for portability. Multiple
             # devices with multiple default creds.
-            self.switch_dict['username'] = self.cfg.get('DEFAULT', 'username')
-            self.switch_dict['password'] = self.cfg.get('DEFAULT', 'password')
+            self.switch_dict['username'] = self.cfg.get('sgardne', 'username')
+            self.switch_dict['password'] = self.cfg.get('sgardne', 'password')
             self.op_rpc = str(
                     'show ethernet-switching interfaces detail | display xml')
 
             # Create the connection and get the xml
             self.conn = ConnectHandler(**self.switch_dict)
             self.xml_output = self.conn.send_command(self.op_rpc)
+
             if self.switch_dict['username'] == "root":
                 print("User is root")
-                self.clean_xml = str(self.xml_output).strip().partition("\n")[0]
+                self.clean_xml = str(self.xml_output).partition("\n")[2]
             else:
-                print("User is " + self.switch_dict['username'])
+                print("User is not root: " + self.switch_dict['username'])
                 self.clean_xml = str(self.xml_output).strip().partition("\n")[2]
 
-            print(self.clean_xml)
             
             self.dict_of_xml = xmltodict.parse(self.clean_xml)
             for interface in self.dict_of_xml['rpc-reply']['switching-interface-information']['interface']:
