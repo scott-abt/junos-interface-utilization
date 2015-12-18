@@ -1,90 +1,96 @@
 #!/usr/bin/env python
 
 """
-Retrieves the percent of utilized access ports on a Juniper EX switch.
+Retrieves the number of utilized access ports on a Juniper EX switch.
 
-Specifically written for Python 2.6 because that's what I have. Get the % of utilized interfaces on the stack. Do not include feeds or other
-non-access ports.
+Specifically written for Python 2.6 because that's what I have. Get the number
+of utilized interfaces on the stack. Do not include feeds or other non-access ports.
 """
 
-import getpass, sys, xmltodict, re
+import xmltodict, re
 from netmiko import ConnectHandler
 from argparse import ArgumentParser as AP
-from argparse import FileType
-from ConfigParser import ConfigParser
+import ConfigParser
 
 class AccessInterfaceUtilization:
     
     """
-    Object containing utilization stats of a switch
-    switch_dict needs to be in netmiko device format.
+    Currently only counts ge-* interfaces in an 'up' state.
+    Does not count 'tagged' interfaces.
     """
 
-    def __init__(self, ini_file="default.ini", switch_dict={}):
+    def __init__(self, ip_addr, cfg_file='default.ini'):
 
-        self.ini_file = ini_file
-        self.switch_dict = switch_dict
-        self.up_access_interfaces = 0
-        self.up_lacp_member_interfaces = 0
-        self.total_interfaces = 0
-        self.percent_utilization = 0
+        self.ip_addr = ip_addr
+        self.switch_dict = {
+                'device_type': 'juniper',
+                'ip': self.ip_addr,
+                'username': '',
+                'password': '',
+            }
 
+        self.cfg_file = cfg_file
+        self.cfg_parser = ConfigParser.ConfigParser()
         try:
-            self.cfg = ConfigParser()
-            self.cfg.readfp(open(self.ini_file))
+            self.result = self.cfg_parser.readfp(open(self.cfg_file))
         except IOError as ioe:
-            print("Error opening " + self.ini_file + " {0}".format(ioe))
+            print("Could not open " + self.cfg_file + ": {0}".format(ioe))
+            throw
 
-        if len(self.switch_dict.keys()) > 0:
-            self.op_rpc = str(
-                    'show ethernet-switching interfaces detail | display xml')
-
-            # Create the connection and get the xml
-            self.conn = ConnectHandler(**self.switch_dict)
-            self.xml_output = self.conn.send_command(self.op_rpc)
-
-            if self.switch_dict['username'] == "root":
-                self.clean_xml = str(self.xml_output).partition("\n")[2]
-            else:
-                self.clean_xml = str(self.xml_output).strip().partition("\n")[2]
+        # Cycle through the credentials given until we find one that works or
+        # throw an error.
+        self.count = 0
+        for section in self.cfg_parser.sections():
+            user = self.cfg_parser.get(section, 'username')
+            password = self.cfg_parser.get(section, 'password')
+            self.switch_dict['username'] = user
+            self.switch_dict['password'] = password
             
-            self.dict_of_xml = xmltodict.parse(self.clean_xml)
-            for interface in self.dict_of_xml['rpc-reply']['switching-interface-information']['interface']:
-                self.gige_re = re.compile('ge-.*')
-                if (self.gige_re.match(interface['interface-name']) and
-                        interface['interface-port-mode'] == "Access" and
-                        interface['interface-state'] == "up"):
-                    self.up_access_interfaces += 1
+            try:
+                self.conn = ConnectHandler(**self.switch_dict)
+            except Exception as e:
+                print("Could not connect: {0}".format(e))
+                if self.count <= len(self.cfg_parser.sections()):
+                    self.count += 1
+                    pass
+                else:
+                    raise
+            pass
+
+        self.op_rpc = (
+                'show ethernet-switching interfaces detail | display xml')
+        self.xml_output = self.conn.send_command(self.op_rpc)
+
+        if self.switch_dict['username'] == "root":
+            self.clean_xml = str(self.xml_output).partition("\n")[2]
         else:
-            print("Got no devices")
-            self.device_list = {}
+            self.clean_xml = str(self.xml_output).strip().partition("\n")[2]
+
+        self.dict_of_xml = xmltodict.parse(self.clean_xml)
+        self.up_access_interfaces = 0
+        for interface in self.dict_of_xml['rpc-reply']['switching-interface-information']['interface']:
+            self.gige_re = re.compile('ge-.*')
+            if (self.gige_re.match(interface['interface-name']) and
+                    interface['interface-port-mode'] == "Access" and
+                    interface['interface-state'] == "up"):
+                self.up_access_interfaces += 1
 
 def main():
-    arg_parser = AP()
-    
-    arg_parser.add_argument('username',
-            help='Switch user with operator priveleges')
-    arg_parser.add_argument('-p', dest='password',
-            action='store_true',
-            default=False,
-            help='Configure the switch password')
-    arg_parser.add_argument('cfg_file', 
-            default="SWITCH_LIST",
-            help="Imports list of dicts from a local file. default is "
-            "SWITCH_LIST.py")
-    result = arg_parser.parse_args()
 
-    if result.password:
-        switch_pass = getpass.getpass()
-    else:
-        switch_pass = ""
-    
-    SWITCH_LIST = __import__(result.cfg_file)
-    for switch_dict in SWITCH_LIST.the_list:
-        switch_dict['username'] = result.username
-        switch_dict['password'] = switch_pass
-        arp_table = AccessInterfaceUtilization("mycreds.ini", switch_dict)
-        print(arp_table.up_access_interfaces)
+    cfg_file="default.ini"
+    arg_parser = AP()
+    arg_parser.add_argument('-i', dest='ip_addr',
+            help="IP address or FQDN of the switch")
+    arg_parser.add_argument('-c,', dest='cfg_file',
+            help="INI file containing credentials. See default.ini for"
+                " example")
+
+    result = arg_parser.parse_args()
+    if result.cfg_file:
+        cfg_file = result.cfg_file
+
+    access_interfaces = AccessInterfaceUtilization(result.ip_addr, cfg_file)
+    print(access_interfaces.up_access_interfaces)
 
 if __name__ == "__main__":
     main()
