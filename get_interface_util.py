@@ -19,44 +19,11 @@ class AccessInterfaceUtilization:
     Does not count 'tagged' interfaces.
     """
 
-    def __init__(self, ip_addr, cfg_file='default.ini'):
+    def __init__(self, conn, switch_dict):
+        self.conn = conn
+        self.switch_dict = switch_dict
 
-        self.ip_addr = ip_addr
-        self.switch_dict = {
-                'device_type': 'juniper',
-                'ip': self.ip_addr,
-                'username': '',
-                'password': '',
-            }
-
-        self.cfg_file = cfg_file
-        self.cfg_parser = ConfigParser.ConfigParser()
-        try:
-            self.result = self.cfg_parser.readfp(open(self.cfg_file))
-        except IOError as ioe:
-            print("Could not open " + self.cfg_file + ": {0}".format(ioe))
-            throw
-
-        # Cycle through the credentials given until we find one that works or
-        # throw an error.
-        self.count = 0
-        for section in self.cfg_parser.sections():
-            user = self.cfg_parser.get(section, 'username')
-            password = self.cfg_parser.get(section, 'password')
-            self.switch_dict['username'] = user
-            self.switch_dict['password'] = password
-            
-            try:
-                self.conn = ConnectHandler(**self.switch_dict)
-            except Exception as e:
-                print("Could not connect: {0}".format(e))
-                if self.count <= len(self.cfg_parser.sections()):
-                    self.count += 1
-                    pass
-                else:
-                    raise
-            pass
-
+    def get_utilization(self):
         self.op_rpc = (
                 'show ethernet-switching interfaces detail | display xml')
         self.xml_output = self.conn.send_command(self.op_rpc)
@@ -77,20 +44,41 @@ class AccessInterfaceUtilization:
 
 def main():
 
-    cfg_file="default.ini"
     arg_parser = AP()
-    arg_parser.add_argument('-i', dest='ip_addr',
-            help="IP address or FQDN of the switch")
-    arg_parser.add_argument('-c,', dest='cfg_file',
-            help="INI file containing credentials. See default.ini for"
-                " example")
+    arg_parser.add_argument('-i', dest='ip_addr', help="IP address or FQDN "
+                            "of the switch")
+    arg_parser.add_argument('cfg_file', help="INI file containing "
+                            "credentials. See default.ini for" " example")
 
-    result = arg_parser.parse_args()
-    if result.cfg_file:
-        cfg_file = result.cfg_file
+    args = arg_parser.parse_args()
+    cfg_parser = ConfigParser.ConfigParser()
+    try:
+        cfg_parser.readfp(open(args.cfg_file))
+    except IOError as ioe:
+        raise
 
-    access_interfaces = AccessInterfaceUtilization(result.ip_addr, cfg_file)
-    print(access_interfaces.up_access_interfaces)
+    for cred_set in cfg_parser.sections():
+        switch_dict = {
+                'device_type': 'juniper',
+                'ip': args.ip_addr,
+                'username': cfg_parser.get(cred_set, 'username'),
+                'password': cfg_parser.get(cred_set, 'password'),
+            }
+        
+        try:
+            conn = ConnectHandler(**switch_dict)
+        except:
+            raise
+
+        utilization = AccessInterfaceUtilization(conn, switch_dict)
+
+        try:
+            utilization.get_utilization()
+        except:
+            raise
+
+        print(utilization.up_access_interfaces)
+
 
 if __name__ == "__main__":
     main()
