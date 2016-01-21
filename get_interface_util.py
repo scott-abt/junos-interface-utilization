@@ -4,7 +4,8 @@
 Retrieves the number of utilized access ports on a Juniper EX switch.
 
 Specifically written for Python 2.6 because that's what I have. Get the number
-of utilized interfaces on the stack. Do not include feeds or other non-access ports.
+of utilized interfaces on the stack. Do not include feeds or other non-access 
+ports.
 """
 
 import xmltodict, re
@@ -22,8 +23,6 @@ class AccessInterfaceUtilization:
     def __init__(self, conn, switch_dict):
         self.conn = conn
         self.switch_dict = switch_dict
-
-    def get_utilization(self):
         self.op_rpc = (
                 'show ethernet-switching interfaces detail | display xml')
         self.xml_output = self.conn.send_command(self.op_rpc)
@@ -33,14 +32,25 @@ class AccessInterfaceUtilization:
         else:
             self.clean_xml = str(self.xml_output).strip().partition("\n")[2]
 
-        self.dict_of_xml = xmltodict.parse(self.clean_xml)
-        self.up_access_interfaces = 0
-        for interface in self.dict_of_xml['rpc-reply']['switching-interface-information']['interface']:
-            self.gige_re = re.compile('ge-.*')
-            if (self.gige_re.match(interface['interface-name']) and
-                    interface['interface-port-mode'] == "Access" and
-                    interface['interface-state'] == "up"):
-                self.up_access_interfaces += 1
+        if self.clean_xml:
+            self.dict_of_xml = xmltodict.parse(self.clean_xml)
+            self.up_access_interfaces = 0
+            for interface in self.dict_of_xml['rpc-reply']['switching-interface-information']['interface']:
+                self.gige_re = re.compile('ge-.*')
+                if (self.gige_re.match(interface['interface-name']) and
+                        interface['interface-port-mode'] == "Access" and
+                        interface['interface-state'] == "up"):
+                    self.up_access_interfaces += 1
+        else:
+            print("I connected, but no valid response was received from the "
+                  "switch. Here's the raw output:<snip>\n{0}".format(self.xml_output))
+            print("</snip>")
+            raise ValueError
+
+
+    def get_utilization(self):
+        return self.up_access_interfaces
+
 
 def main():
 
@@ -57,27 +67,27 @@ def main():
     except IOError as ioe:
         raise
 
+    fails = 0
     for cred_set in cfg_parser.sections():
         switch_dict = {
-                'device_type': 'juniper',
-                'ip': args.ip_addr,
-                'username': cfg_parser.get(cred_set, 'username'),
-                'password': cfg_parser.get(cred_set, 'password'),
-            }
+            'device_type': 'juniper',
+            'ip': args.ip_addr,
+            'username': cfg_parser.get(cred_set, 'username'),
+            'password': cfg_parser.get(cred_set, 'password'),
+        }
         
         try:
             conn = ConnectHandler(**switch_dict)
         except:
-            raise
-
+            fails += 1
+            print(switch_dict["username"] + " failed...")
+            continue
+            
         utilization = AccessInterfaceUtilization(conn, switch_dict)
-
         try:
-            utilization.get_utilization()
+            print(utilization.get_utilization())
         except:
             raise
-
-        print(utilization.up_access_interfaces)
 
 
 if __name__ == "__main__":
