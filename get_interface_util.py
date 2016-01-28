@@ -27,13 +27,13 @@ class AccessInterfaceUtilization:
                 'show ethernet-switching interfaces detail | display xml')
         self.xml_output = self.conn.send_command(self.op_rpc)
 
-        if self.switch_dict['username'] == "root":
-            self.clean_xml = str(self.xml_output).partition("\n")[2]
-        else:
-            self.clean_xml = str(self.xml_output).strip().partition("\n")[2]
+        # if self.switch_dict['username'] == "root":
+        #     self.clean_xml = str(self.xml_output).partition("\n")[2]
+        # else:
+        #     self.clean_xml = str(self.xml_output).strip().partition("\n")[2]
 
-        if self.clean_xml:
-            self.dict_of_xml = xmltodict.parse(self.clean_xml)
+        if self.xml_output:
+            self.dict_of_xml = xmltodict.parse(self.xml_output)
             self.up_access_interfaces = 0
             for interface in self.dict_of_xml['rpc-reply']['switching-interface-information']['interface']:
                 self.gige_re = re.compile('ge-.*')
