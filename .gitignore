@@ -1,4 +1,4 @@
 .git
 *.swp
-mycreds.ini
+mycreds.*
 *.pyc

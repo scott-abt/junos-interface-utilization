@@ -11,7 +11,8 @@ ports.
 import xmltodict, re
 from netmiko import ConnectHandler
 from argparse import ArgumentParser as AP
-import ConfigParser
+from mycreds import the_creds
+
 
 class AccessInterfaceUtilization:
     
@@ -27,13 +28,13 @@ class AccessInterfaceUtilization:
                 'show ethernet-switching interfaces detail | display xml')
         self.xml_output = self.conn.send_command(self.op_rpc)
 
-        # if self.switch_dict['username'] == "root":
-        #     self.clean_xml = str(self.xml_output).partition("\n")[2]
-        # else:
-        #     self.clean_xml = str(self.xml_output).strip().partition("\n")[2]
+        if self.switch_dict['username'] == "root":
+            self.clean_xml = str(self.xml_output).partition("\n")[2]
+        else:
+            self.clean_xml = str(self.xml_output).strip().partition("\n")[2]\
 
-        if self.xml_output:
-            self.dict_of_xml = xmltodict.parse(self.xml_output)
+        if self.clean_xml:
+            self.dict_of_xml = xmltodict.parse(self.clean_xml)
             self.up_access_interfaces = 0
             for interface in self.dict_of_xml['rpc-reply']['switching-interface-information']['interface']:
                 self.gige_re = re.compile('ge-.*')
@@ -57,37 +58,33 @@ def main():
     arg_parser = AP()
     arg_parser.add_argument('-i', dest='ip_addr', help="IP address or FQDN "
                             "of the switch")
-    arg_parser.add_argument('cfg_file', help="INI file containing "
-                            "credentials. See default.ini for" " example")
-
+    
     args = arg_parser.parse_args()
-    cfg_parser = ConfigParser.ConfigParser()
-    try:
-        cfg_parser.readfp(open(args.cfg_file))
-    except IOError as ioe:
-        raise
 
     fails = 0
-    for cred_set in cfg_parser.sections():
-        switch_dict = {
-            'device_type': 'juniper',
-            'ip': args.ip_addr,
-            'username': cfg_parser.get(cred_set, 'username'),
-            'password': cfg_parser.get(cred_set, 'password'),
-        }
-        
-        try:
-            conn = ConnectHandler(**switch_dict)
-        except:
-            fails += 1
-            print(switch_dict["username"] + " failed...")
-            continue
+    for cred_set in the_creds:
+        for username, password in cred_set.items():
+            switch_dict = {
+                'device_type': 'juniper',
+                'ip': args.ip_addr,
+                'username': username,
+                'password': password,
+            }
+
+            print(switch_dict)
             
-        utilization = AccessInterfaceUtilization(conn, switch_dict)
-        try:
-            print(utilization.get_utilization())
-        except:
-            raise
+            try:
+                conn = ConnectHandler(**switch_dict)
+            except Exception as e:
+                fails += 1
+                print(switch_dict["username"] + " failed...")
+                continue
+                
+            utilization = AccessInterfaceUtilization(conn, switch_dict)
+            try:
+                print(utilization.get_utilization())
+            except:
+                raise
 
 
 if __name__ == "__main__":
