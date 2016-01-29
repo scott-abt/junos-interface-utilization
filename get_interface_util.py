@@ -11,6 +11,7 @@ ports.
 import xmltodict, re
 from netmiko import ConnectHandler
 from argparse import ArgumentParser as AP
+from xml.parsers.expat import ExpatError
 
 try:
     from mycreds import the_creds
@@ -39,7 +40,14 @@ class AccessInterfaceUtilization:
             self.clean_xml = str(self.xml_output).strip().partition("\n")[2]\
 
         if self.clean_xml:
-            self.dict_of_xml = xmltodict.parse(self.clean_xml)
+            try:
+                self.dict_of_xml = xmltodict.parse(self.clean_xml)
+            except ExpatError:
+                try:
+                    self.dict_of_xml = xmltodict.parse(self.xml_output)
+                except:
+                    raise
+
             self.up_access_interfaces = 0
             for interface in self.dict_of_xml['rpc-reply']['switching-interface-information']['interface']:
                 self.gige_re = re.compile('ge-.*')
@@ -75,8 +83,6 @@ def main():
                 'username': username,
                 'password': password,
             }
-
-            print(switch_dict)
             
             try:
                 conn = ConnectHandler(**switch_dict)
