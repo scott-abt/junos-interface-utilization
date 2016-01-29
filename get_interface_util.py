@@ -11,7 +11,12 @@ ports.
 import xmltodict, re
 from netmiko import ConnectHandler
 from argparse import ArgumentParser as AP
-from mycreds import the_creds
+
+try:
+    from mycreds import the_creds
+except ImportError as ie:
+    print("\n\n***You must provide mycreds.py in this directory. See example_creds.py for format.***\n\n")
+    raise
 
 
 class AccessInterfaceUtilization:
