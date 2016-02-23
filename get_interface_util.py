@@ -82,13 +82,14 @@ def main():
                 'ip': args.ip_addr,
                 'username': username,
                 'password': password,
+                'verbose': False,
             }
             
             try:
                 conn = ConnectHandler(**switch_dict)
-            except Exception as e:
+            except:
                 fails += 1
-                print(switch_dict["username"] + " failed...")
+                print(switch_dict["username"] + " failed")
                 continue
                 
             utilization = AccessInterfaceUtilization(conn, switch_dict)
