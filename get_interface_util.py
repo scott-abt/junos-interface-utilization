@@ -75,7 +75,10 @@ def main():
     args = arg_parser.parse_args()
 
     fails = 0
+    success = 0
     for cred_set in the_creds:
+        if (success > 0):
+            continue
         for username, password in cred_set.items():
             switch_dict = {
                 'device_type': 'juniper',
@@ -89,12 +92,12 @@ def main():
                 conn = ConnectHandler(**switch_dict)
             except:
                 fails += 1
-                print(switch_dict["username"] + " failed")
                 continue
                 
             utilization = AccessInterfaceUtilization(conn, switch_dict)
             try:
                 print(utilization.get_utilization())
+                success =+ 1
             except:
                 raise
 
